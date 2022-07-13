@@ -120,7 +120,7 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    num_classes = max(y) + 1
+    num_classes = W.shape[1]
     # one-hot
     y_mask = np.eye(num_classes)[y]
     m = margin > 0
