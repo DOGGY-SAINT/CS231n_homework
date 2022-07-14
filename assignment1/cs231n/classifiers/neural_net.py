@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from past.builtins import xrange
 
+
 class TwoLayerNet(object):
     """
     A two-layer fully-connected neural network. The net has an input dimension of
@@ -72,7 +73,7 @@ class TwoLayerNet(object):
         N, D = X.shape
 
         # Compute the forward pass
-        scores = None
+        predict = None
         #############################################################################
         # TODO: Perform the forward pass, computing the class scores for the input. #
         # Store the result in the scores variable, which should be an array of      #
@@ -80,13 +81,18 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # fully connected layer
+        l1 = X.dot(W1) + b1
+        # Relu
+        l2 = np.maximum(l1, 0)
+        # fully connected layer
+        predict = l2.dot(W2) + b2
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # If the targets are not given then jump out, we're done
         if y is None:
-            return scores
+            return predict
 
         # Compute the loss
         loss = None
@@ -98,7 +104,13 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # softmax
+        e_scores = np.exp(predict)
+        sum_e_l3 = np.sum(e_scores, axis=1).reshape(-1, 1)
+        prob = e_scores / sum_e_l3
+        loss = np.mean(-np.log(prob[range(N), y]))
+        loss += reg * np.sum(W1 * W1)
+        loss += reg * np.sum(W2 * W2)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -111,7 +123,14 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        C = W2.shape[1]
+        y_mask = np.eye(C)[y]
+        delta_y = prob - y_mask
+        g2 = delta_y.dot(W2.transpose()) * (l2 > 0)
+        grads['W2'] = l2.transpose().dot(delta_y) / N + 2 * reg * W2
+        grads['b2'] = np.mean(delta_y, axis=0)
+        grads['W1'] = X.transpose().dot(g2) / N + 2 * reg * W1
+        grads['b1'] = np.mean(g2, axis=0)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -156,7 +175,9 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            index = np.random.choice(num_train, batch_size)
+            X_batch = X[index]
+            y_batch = y[index]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -172,7 +193,8 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            for key, value in self.params.items():
+                value -= learning_rate * grads[key]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -191,9 +213,9 @@ class TwoLayerNet(object):
                 learning_rate *= learning_rate_decay
 
         return {
-          'loss_history': loss_history,
-          'train_acc_history': train_acc_history,
-          'val_acc_history': val_acc_history,
+            'loss_history': loss_history,
+            'train_acc_history': train_acc_history,
+            'val_acc_history': val_acc_history,
         }
 
     def predict(self, X):
@@ -218,7 +240,21 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # Unpack variables from the params dictionary
+        W1, b1 = self.params['W1'], self.params['b1']
+        W2, b2 = self.params['W2'], self.params['b2']
+
+        # fully connected layer
+        l1 = X.dot(W1) + b1
+        # Relu
+        l2 = np.maximum(l1, 0)
+        # fully connected layer
+        l3 = l2.dot(W2) + b2
+        # softmax, not necessary but i calculate it.
+        e_l3 = np.exp(l3)
+        sum_e_l3 = np.sum(e_l3, axis=1).reshape(-1, 1)
+        scores = e_l3 / sum_e_l3
+        y_pred = np.argmax(scores, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
