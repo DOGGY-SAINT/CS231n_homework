@@ -197,7 +197,17 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        sample_mean = np.mean(x, axis=0)
+        delta_mean = x - sample_mean
+        sample_var = np.mean(delta_mean ** 2, axis=0)
+        std = np.sqrt(sample_var + eps)
+
+        xt = delta_mean / std
+        out = gamma * xt + beta
+        cache = (xt, gamma, delta_mean, std)
+
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -212,7 +222,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        xt = (x - running_mean) / (np.sqrt(running_var) + eps)
+        out = gamma * xt + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -254,7 +265,17 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # I didn't use the computation graph. This impletation is the same as the next one.
+    xt, gamma, delta_mean, std = cache
+    m = xt.shape[0]
+
+    dxt = dout * gamma
+    dvar = np.sum(dxt * delta_mean * (-0.5) / (std ** 3), axis=0)
+    dmean = np.sum(dxt * (-1) / std, axis=0) + dvar * np.mean((-2) * delta_mean, axis=0)
+
+    dx = dxt / std + dvar * 2 * delta_mean / m + dmean / m
+    dgamma = np.sum(dout * xt, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -289,7 +310,21 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # This algorithm can be found in the paper.
+    # Amazing and beautiful algorithm.
+    # Beautiful math.
+    # I think you should know how to get the following result.
+    # Time to review the Calculus knowledge.
+    xt, gamma, delta_mean, std = cache
+    m = xt.shape[0]
+
+    dxt = dout * gamma
+    dvar = np.sum(dxt * delta_mean * (-0.5) / (std ** 3), axis=0)
+    dmean = np.sum(dxt * (-1) / std, axis=0) + dvar * np.mean((-2) * delta_mean, axis=0)
+
+    dx = dxt / std + dvar * 2 * delta_mean / m + dmean / m
+    dgamma = np.sum(dout * xt, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -335,7 +370,20 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x = x.transpose()
+
+    sample_mean = np.mean(x, axis=0)
+    delta_mean = x - sample_mean
+    sample_var = np.mean(delta_mean ** 2, axis=0)
+    std = np.sqrt(sample_var + eps)
+
+    xt = delta_mean / std
+
+    cache = (xt, gamma.reshape(-1, 1), delta_mean, std)
+
+    xt = xt.transpose()
+
+    out = gamma * xt + beta
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -370,7 +418,19 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dout = dout.transpose()
+    xt, gamma, delta_mean, std = cache
+    m = xt.shape[0]
+
+    dxt = dout * gamma
+    dvar = np.sum(dxt * delta_mean * (-0.5) / (std ** 3), axis=0)
+    dmean = np.sum(dxt * (-1) / std, axis=0) + dvar * np.mean((-2) * delta_mean, axis=0)
+
+    dx = dxt / std + dvar * 2 * delta_mean / m + dmean / m
+    dgamma = np.sum(dout * xt, axis=1)
+    dbeta = np.sum(dout, axis=1)
+
+    dx = dx.transpose()
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
