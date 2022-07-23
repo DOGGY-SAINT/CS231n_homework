@@ -290,9 +290,10 @@ class FullyConnectedNet(object):
                 elif self.normalization == "layernorm":
                     gamma, beta = self.params['gamma%d' % (i + 1)], self.params['beta%d' % (i + 1)]
                     bn_param = self.bn_params[i]
-                    scores, caches[i]['bn'] = layernorm_forward(scores, gamma, beta, bn_param)
+                    scores, caches[i]['ln'] = layernorm_forward(scores, gamma, beta, bn_param)
                 scores, caches[i]['relu'] = relu_forward(scores)
-                pass
+                if self.use_dropout:
+                    scores, caches[i]['drop'] = dropout_forward(scores, self.dropout_param)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -322,14 +323,15 @@ class FullyConnectedNet(object):
         loss, dx = softmax_loss(scores, y)
         for i in range(self.num_layers - 1, -1, -1):
             if i < self.num_layers - 1:
-                pass
+                if self.use_dropout:
+                    dx = dropout_backward(dx, caches[i]['drop'])
                 dx = relu_backward(dx, caches[i]['relu'])
                 if self.normalization == "batchnorm":
                     dx, grads['gamma%d' % (i + 1)], grads['beta%d' % (i + 1)] = batchnorm_backward_alt(dx,
                                                                                                        caches[i]['bn'])
                 elif self.normalization == "layernorm":
                     dx, grads['gamma%d' % (i + 1)], grads['beta%d' % (i + 1)] = layernorm_backward(dx,
-                                                                                                   caches[i]['bn'])
+                                                                                                   caches[i]['ln'])
             dx, grads['W%d' % (i + 1)], grads['b%d' % (i + 1)] = affine_backward(dx, caches[i]['affine'])
             loss += self.reg * 0.5 * np.sum(self.params['W%d' % (i + 1)] * self.params['W%d' % (i + 1)])
             grads['W%d' % (i + 1)] += self.reg * self.params['W%d' % (i + 1)]
