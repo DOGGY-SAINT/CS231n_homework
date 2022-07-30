@@ -19,13 +19,13 @@ class CaptioningRNN(object):
     """
 
     def __init__(
-        self,
-        word_to_idx,
-        input_dim=512,
-        wordvec_dim=128,
-        hidden_dim=128,
-        cell_type="rnn",
-        dtype=np.float32,
+            self,
+            word_to_idx,
+            input_dim=512,
+            wordvec_dim=128,
+            hidden_dim=128,
+            cell_type="rnn",
+            dtype=np.float32,
     ):
         """
         Construct a new CaptioningRNN instance.
@@ -151,7 +151,24 @@ class CaptioningRNN(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        cache = {}
+        h0, cache['proj'] = affine_forward(features, W_proj, b_proj)
+        embed, cache['embed'] = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == 'rnn':
+            rnn, cache['rnn'] = rnn_forward(embed, h0, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            pass
+        vocab, cache['vocab'] = temporal_affine_forward(rnn, W_vocab, b_vocab)
+
+        loss, dx = temporal_softmax_loss(vocab, captions_out, mask)
+
+        dx, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dx, cache['vocab'])
+        if self.cell_type == 'rnn':
+            dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dx, cache['rnn'])
+        elif self.cell_type == 'lstm':
+            pass
+        grads['W_embed'] = word_embedding_backward(dx, cache['embed'])
+        dfeatures, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, cache['proj'])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -219,7 +236,14 @@ class CaptioningRNN(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h0, _ = affine_forward(features, W_proj, b_proj)
+        captions[:, 0] = self._start
+        for i in range(max_length):
+            if i > 0:
+                embed, _ = word_embedding_forward(captions[:, i - 1], W_embed)
+                h0, _ = rnn_step_forward(embed, h0, Wx, Wh, b)
+                scores, _ = affine_forward(h0, W_vocab, b_vocab)
+                captions[:, i] = np.argmax(scores, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
