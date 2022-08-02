@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 
+
 def compute_saliency_maps(X, y, model):
     """
     Compute a class saliency map using the model for images X and labels y.
@@ -35,13 +36,21 @@ def compute_saliency_maps(X, y, model):
     ###############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    X = tf.convert_to_tensor(X)
+    # y = tf.Tensor(y)
+    with tf.GradientTape() as g:
+        g.watch(X)
+        scores = model(X)
+        score = tf.gather_nd(scores, np.hstack((np.arange(scores.shape[0]).reshape(-1, 1), y.reshape(-1, 1))))
+        dx = g.gradient(score, X)
+    saliency = np.max(np.abs(dx), axis=3)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                             END OF YOUR CODE                               #
     ##############################################################################
     return saliency
+
 
 def make_fooling_image(X, target_y, model):
     """
@@ -84,13 +93,24 @@ def make_fooling_image(X, target_y, model):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    X_fooling = tf.convert_to_tensor(X)
+    while True:
+        with tf.GradientTape() as tape:
+            tape.watch(X_fooling)
+            scores = model(X_fooling)
+            score = tf.gather(scores, target_y, axis=1)
+            g = tape.gradient(score, X_fooling)
+            dX = learning_rate * g / tf.norm(g, 2)
+        X_fooling += dX
+        if np.argmax(model.predict(X_fooling)) == target_y:
+            break
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                             END OF YOUR CODE                               #
     ##############################################################################
     return X_fooling
+
 
 def class_visualization_update_step(X, model, target_y, l2_reg, learning_rate):
     ########################################################################
@@ -103,7 +123,15 @@ def class_visualization_update_step(X, model, target_y, l2_reg, learning_rate):
     ########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    with tf.GradientTape() as tape:
+        tape.watch(X)
+        scores = model(X)
+        score = tf.gather(scores, target_y, axis=1)
+        reg = tf.multiply(l2_reg, tf.square(tf.norm(X, 2)))
+        loss = tf.add(reg, score)
+        g = tape.gradient(loss, X)
+        dX = learning_rate * g / tf.norm(g, 2)
+    X = tf.add(X, dX)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ############################################################################
@@ -112,10 +140,12 @@ def class_visualization_update_step(X, model, target_y, l2_reg, learning_rate):
 
     return X
 
+
 def blur_image(X, sigma=1):
     X = gaussian_filter1d(X, sigma, axis=1)
     X = gaussian_filter1d(X, sigma, axis=2)
     return X
+
 
 def jitter(X, ox, oy):
     """
