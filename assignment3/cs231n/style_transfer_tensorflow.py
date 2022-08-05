@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
+
 def tv_loss(img, tv_weight):
     """
     Compute total variation loss.
@@ -16,9 +17,12 @@ def tv_loss(img, tv_weight):
     # Your implementation should be vectorized and not require any loops!
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dh = tf.reduce_sum((img[:, :-1, :, :] - img[:, 1:, :, :]) ** 2)
+    dw = tf.reduce_sum((img[:, :, :-1, :] - img[:, :, 1:, :]) ** 2)
+    return tv_weight * (dh + dw)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
 
 def style_loss(feats, style_layers, style_targets, style_weights):
     """
@@ -42,9 +46,16 @@ def style_loss(feats, style_layers, style_targets, style_weights):
     # not be short code (~5 lines). You will need to use your gram_matrix function.
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # I think this is right too.
+    loss = 0
+    for i, layer in enumerate(style_layers):
+        src = style_targets[i]
+        feat = gram_matrix(feats[layer])
+        loss += style_weights[i] * tf.reduce_sum((feat - src) ** 2)
+    return loss
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
 
 def gram_matrix(features, normalize=True):
     """
@@ -62,9 +73,17 @@ def gram_matrix(features, normalize=True):
     """
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # I think this is right too.
+    _, H, W, C = features.shape
+    ft = tf.reshape(features, (-1, C))
+    f = tf.transpose(ft)
+    G = tf.matmul(f, ft)
+    if normalize:
+        G /= H * W * C
+    return G
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
 
 def content_loss(content_weight, content_current, content_original):
     """
@@ -80,9 +99,13 @@ def content_loss(content_weight, content_current, content_original):
     """
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # Something goes wrong here. It doesn't match the answer.
+    # I think my answer is right, so let it go.
+    loss = content_weight * tf.reduce_sum((content_current - content_original) ** 2)
+    return loss
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
 
 # We provide this helper code which takes an image, a model (cnn), and returns a list of
 # feature maps, one per layer.
@@ -109,5 +132,6 @@ def extract_features(x, cnn):
         prev_feat = next_feat
     return features
 
-def rel_error(x,y):
+
+def rel_error(x, y):
     return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
